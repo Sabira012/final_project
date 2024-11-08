@@ -13,5 +13,5 @@ The dataset used for this project is a cleaned version of a used car sales datas
 ## How to Reproduce
 1. Clone this repository:
 git clone https://github.com/Sabira012/final_project.git
-2. Run the Stata `.do` files from the `scripts/stata` folder.
+2. Run the Stata `.do` files from the `scripts/stata` folder. The main script is final_project.do
 3. Run the Python script `data_analysis.py` from the `scripts/python` folder.
