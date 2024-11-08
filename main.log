@@ -1,0 +1,224 @@
+----------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  C:\Users\Onbayeva_Sabira\Desktop\final_project\main.log
+  log type:  text
+ opened on:   7 Nov 2024, 12:31:37
+
+. 
+. // *** Folder Structure ***
+. 
+. cap mkdir data               
+
+. cap mkdir output             
+
+. cap mkdir output/graphs      
+
+. cap mkdir output/tables      
+
+. cap mkdir scripts
+
+. cap mkdir scripts/stata
+
+. cap mkdir scripts/python
+
+.            
+. //***Loading and Inspecting the Dataset***
+. 
+. import delimited "data/used_cars_2cities.csv", varnames(1) bindquotes(strict) en
+> coding("utf-8") clear
+(15 vars, 1,095 obs)
+
+. browse
+
+. describe
+
+Contains data
+ Observations:         1,095                  
+    Variables:            15                  
+----------------------------------------------------------------------------------
+Variable      Storage   Display    Value
+    name         type    format    label      Variable label
+----------------------------------------------------------------------------------
+v1              int     %8.0g                 
+price           str6    %9s                   
+area            str11   %11s                  
+subarea         str20   %20s                  
+name            str51   %51s                  
+condition       str9    %9s                   
+cylinders       str11   %11s                  
+drive           str3    %9s                   
+fuel            str6    %9s                   
+odometer        str7    %9s                   
+paintcolor      str6    %9s                   
+size            str11   %11s                  
+transmission    str9    %9s                   
+type            str11   %11s                  
+dealer          byte    %8.0g                 
+----------------------------------------------------------------------------------
+Sorted by: 
+     Note: Dataset has changed since last saved.
+
+. summarize
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+          v1 |      1,095    578.3562    342.6643          1       1199
+       price |          0
+        area |          0
+     subarea |          0
+        name |          0
+-------------+---------------------------------------------------------
+   condition |          0
+   cylinders |          0
+       drive |          0
+        fuel |          0
+    odometer |          0
+-------------+---------------------------------------------------------
+  paintcolor |          0
+        size |          0
+transmission |          0
+        type |          0
+      dealer |      1,095    .3050228    .4606275          0          1
+
+. 
+. //***Data Cleaning and Preparation***
+. do scripts/stata/data_cleaning.do
+
+. //***Clean Missing Data***
+. 
+. drop if missing(price)| missing(subarea) | missing(condition) | missing(cylinder
+> s) | missing(drive) | missing(paintcolor) | missing(size) | missing(type) | miss
+> ing(odometer) 
+(0 observations deleted)
+
+. 
+. drop if price == "NA"
+(84 observations deleted)
+
+. drop if subarea == "NA"
+(34 observations deleted)
+
+. drop if condition == "NA"
+(361 observations deleted)
+
+. drop if cylinders == "NA"
+(63 observations deleted)
+
+. drop if drive == "NA"
+(158 observations deleted)
+
+. drop if paintcolor == "NA"
+(59 observations deleted)
+
+. drop if size == "NA"
+(80 observations deleted)
+
+. drop if type == "NA"
+(21 observations deleted)
+
+. drop if odometer == "NA"
+(39 observations deleted)
+
+. 
+. //convert a variable from string (text) format to numeric, if the data should be
+>  numeric
+. destring odometer, replace
+odometer: all characters numeric; replaced as long
+
+. 
+. replace price = subinstr(price, "$", "", .)  // Remove "$" sign
+(196 real changes made)
+
+. destring price, replace  
+price: all characters numeric; replaced as int
+
+. 
+. replace cylinders = subinstr(cylinders, " cylinders", "", .) // Remove " cylinde
+> rs" destring cylinders 
+(196 real changes made)
+
+. destring cylinders, replace 
+cylinders: all characters numeric; replaced as byte
+
+. 
+. //***Filter and Transform Data***
+. // Filter observations to keep only cars with odometer below 100,000
+. keep if odometer < 100000
+(129 observations deleted)
+
+. 
+. // Keep only the specified variables
+. keep price odometer condition cylinders
+
+. 
+. // Create a new variable price_per_mile
+. gen price_per_mile = price / odometer
+
+. 
+. // Save the filtered and transformed dataset
+. save "data/filtered_sample.dta", replace
+file data/filtered_sample.dta saved
+
+. 
+end of do-file
+
+. 
+. //***Create a summary statistics table and a graph***
+. do scripts/stata/table_and_graph.do
+
+. // Generate summary statistics for the filtered dataset
+. summarize
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+       price |         67    10112.37    4566.094        361      18500
+   condition |          0
+   cylinders |         67    4.328358    .7464676          4          6
+    odometer |         67    36443.72    30807.72         80      99999
+price_per_~e |         67    12.14332      27.687   .0527474      112.5
+
+. 
+. // Save summary statistics in a text file
+. ssc install estout
+checking estout consistency and verifying not already installed...
+all files already exist and are up to date.
+
+. estpost summarize
+
+             |  e(count)   e(sum_w)    e(mean)     e(Var)      e(sd)     e(min) 
+-------------+------------------------------------------------------------------
+       price |        67         67   10112.37   2.08e+07   4566.094        361 
+   condition |         0          0          .          .          .          . 
+   cylinders |        67         67   4.328358   .5572139   .7464676          4 
+    odometer |        67         67   36443.72   9.49e+08   30807.72         80 
+price_per_~e |        67         67   12.14332   766.5702     27.687   .0527474 
+
+             |    e(max)     e(sum) 
+-------------+----------------------
+       price |     18500     677529 
+   condition |         .          0 
+   cylinders |         6        290 
+    odometer |     99999    2441729 
+price_per_~e |     112.5   813.6023 
+
+. esttab using "output/tables/summary_statistics.txt", replace
+(output written to output/tables/summary_statistics.txt)
+
+. 
+. // Create a histogram of price
+. histogram price, width(5000) title("Histogram of Car Prices")
+(bin=4, start=361, width=5000)
+
+. 
+. // Save the histogram as a PNG file
+. graph export "output/graphs/price_histogram.png", replace
+(file output/graphs/price_histogram.png not found)
+file output/graphs/price_histogram.png saved as PNG format
+
+. 
+end of do-file
+
+. 
+end of do-file
+
+. exit, clear
